@@ -19,7 +19,7 @@
 //
 
 #define Blocks 640 * 2
-#define size 1024
+#define size 256
 #define N Blocks * size
 
 #define CHECK_BIT(var,pos) (var>>pos & 1)
@@ -63,13 +63,16 @@ void autoStep1(unsigned char *a, unsigned char *b, int *direction, unsigned int 
     rule = rule + ruleBase;
 	
 	for (int i = 0; i<size/32; i++){
+	
+
 		unsigned int ll = a[(j+i - 2)% size + blockBase];
 		unsigned int l  = a[(j+i - 1)% size + blockBase];
-		unsigned int c  = a[(j+i    )% size + blockBase];
+		//unsigned int c  = a[(j+i    )% size + blockBase];
 		unsigned int r  = a[(j+i + 1)% size + blockBase];
 		unsigned int rr = a[(j+i + 2)% size + blockBase];
-  
-		unsigned  int neighboorhood = ll * 16 + l * 8 + c * 4 + r * 2 + rr;
+		
+		
+		unsigned  int neighboorhood = (ll << 3) + (l << 2) + (r << 1) + rr;
  
 		//if (a[j % blockDim.x + blockBase] == a[tid]){ printf(" MATCH ");}
  
@@ -113,12 +116,11 @@ void autoStep2(unsigned char *a, unsigned char *b, int *direction, unsigned int 
 	
 		unsigned int ll = b[(j+i - 2)% size + blockBase];
 		unsigned int l  = b[(j+i - 1)% size + blockBase];
-		unsigned int c  = b[(j+i    )% size + blockBase];
+		//unsigned int c  = b[(j+i    )% size + blockBase];
 		unsigned int r  = b[(j+i + 1)% size + blockBase];
 		unsigned int rr = b[(j+i + 2)% size + blockBase];
   
-		unsigned  int neighboorhood = ll * 16 + l * 8 + c * 4 + r * 2 + rr;
-		
+		unsigned  int neighboorhood = (ll << 3) + (l << 2) + (r << 1) + rr;
  
 		//if (a[j % blockDim.x + blockBase] == a[tid]){ printf(" MATCH ");}
  
@@ -232,18 +234,16 @@ int main( int argc, char *argv[] ) {
 	
 	int scan = 0; //atoi(argv[1]) *size;
 	
-	unsigned int sum = 0;
-	
-		sum = 0;
+	int sum = 0;
 		
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 			if(ha[i] == 1){ printf("X");}
 			else          { printf(" ");}
         }
 		
 		//printf("\n");
 		
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 	        //printf ("%3d  ", directionArray[i]);
             sum += directionArray[i];
         }
@@ -261,14 +261,14 @@ int main( int argc, char *argv[] ) {
 	
 		sum = 0;
 		
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 			if(hb[i] == 1){ printf("X");}
 			else          { printf(" ");}
         }
 		
 		//printf("\n");
 	
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 	        //printf ("%3d  ", directionArray[i]);
             sum += directionArray[i];
         }
@@ -283,14 +283,14 @@ int main( int argc, char *argv[] ) {
 		
 		sum = 0;
 		
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 			if(ha[i] == 1){ printf("X");}
 			else          { printf(" ");}
         }
 		
 		//printf("\n");
 		
-	    for (int i = 0+scan+200; i<size+scan-370; ++i) {
+	    for (int i = 0+scan; i<size+scan; ++i) {
 	        //printf ("%3d  ", directionArray[i]);
             sum += directionArray[i];
         }

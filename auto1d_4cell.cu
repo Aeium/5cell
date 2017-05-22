@@ -10,6 +10,15 @@
 
 
 
+// ./4cell_debug1 65376 123
+
+// vs 
+
+// ./4cell_debug1 0 123
+
+// should be printing out results of same automation but they aint
+
+
 using Clock = std::chrono::steady_clock;
 using std::chrono::time_point;
 using std::chrono::duration_cast;
@@ -30,15 +39,16 @@ using std::chrono::milliseconds;
 // nvcc -o example example.cu
 //
 
-#define Blocks 640
-#define size 1024
-#define N Blocks * size
+#define blockMult 2
+#define Blocks (640 * blockMult)
+#define size 128
+#define N (Blocks * size)
 #define CHECK_BIT(var,pos) (var>>pos & 1)
 #define time 
 #define PLUS_ONE    1.0f
 #define MINUS_ONE   -1.0f
-#define simDuration 100
-#define rounds      10
+#define simDuration 400
+#define rounds      100
 
 //
 // A function marked __global__
@@ -66,7 +76,7 @@ using std::chrono::milliseconds;
 __global__
 void autoStep1(unsigned char *a, unsigned char *b, int *direction, unsigned int ruleBase) {
 
-    unsigned int blockBase = blockIdx.x  * 128;
+    unsigned int blockBase = blockIdx.x  * size;
 
     unsigned int tid = blockBase + threadIdx.x; //(threadIdx.x*8);
 	
@@ -74,11 +84,11 @@ void autoStep1(unsigned char *a, unsigned char *b, int *direction, unsigned int 
     // 256 threads per block so 256 cells in automation 
 	
 	
-	unsigned char neighboorhood = ((a[(threadIdx.x - 2)% 128 + blockBase]) << 3) +
-			                      ((a[(threadIdx.x - 1)% 128 + blockBase]) << 2) +
-	    	                      //((a[(threadIdx.x    )% 128 + blockBase]) << 2) +
-			                      ((a[(threadIdx.x + 1)% 128 + blockBase]) << 1) +
-                                    a[(threadIdx.x + 2)% 128 + blockBase];
+	unsigned char neighboorhood = ((a[(threadIdx.x - 2)% size + blockBase]) << 3) +
+			                      ((a[(threadIdx.x - 1)% size + blockBase]) << 2) +
+	    	                      //((a[(threadIdx.x    )% size + blockBase]) << 2) +
+			                      ((a[(threadIdx.x + 1)% size + blockBase]) << 1) +
+                                    a[(threadIdx.x + 2)% size + blockBase];
     
 	
 	b[tid] = CHECK_BIT(blockIdx.x + ruleBase, neighboorhood );
@@ -132,7 +142,7 @@ void autoStep1(unsigned char *a, unsigned char *b, int *direction, unsigned int 
 __global__
 void autoStep2(unsigned char *a, unsigned char *b, int *direction, unsigned int ruleBase) {
 
-    unsigned int blockBase = blockIdx.x  * 128;
+    unsigned int blockBase = blockIdx.x  * size;
 
     unsigned int tid = blockBase + threadIdx.x;
 	
@@ -140,11 +150,11 @@ void autoStep2(unsigned char *a, unsigned char *b, int *direction, unsigned int 
     // 256 threads per block so 256 cells in automation 
 	
 	
-	unsigned char neighboorhood = ((b[(threadIdx.x - 2)% 128 + blockBase]) << 3) +
-			                      ((b[(threadIdx.x - 1)% 128 + blockBase]) << 2) +
-	    	                      //((b[(threadIdx.x    )% 128 + blockBase]) << 2) +
-			                      ((b[(threadIdx.x + 1)% 128 + blockBase]) << 1) +
-                                   b[(threadIdx.x + 2)% 128 + blockBase];
+	unsigned char neighboorhood = ((b[(threadIdx.x - 2)% size + blockBase]) << 3) +
+			                      ((b[(threadIdx.x - 1)% size + blockBase]) << 2) +
+	    	                      //((b[(threadIdx.x    )% size + blockBase]) << 2) +
+			                      ((b[(threadIdx.x + 1)% size + blockBase]) << 1) +
+                                   b[(threadIdx.x + 2)% size + blockBase];
     
 	a[tid] = CHECK_BIT(blockIdx.x + ruleBase, neighboorhood );
 	
@@ -229,7 +239,6 @@ __global__ void curand_kernel(curandState *state,
  
 int main( int argc, char *argv[] ) {
 
-
     // DB allocations
 
 	int rc;
@@ -283,15 +292,20 @@ int main( int argc, char *argv[] ) {
 	
 	int finalScore[Blocks];
 	
-	unsigned int rule = atoi( argv[1]);
-	//                  2769351843
+    int rule = 0; //atoi( argv[1]);
+	//                  2769351843   // 2769351763;  // + 465
 	//                  2769352740
+	
+	// 2769352362
+	// 2769352228
+
+	//  
 
     std::ofstream logs;
 	
     int loop = 0;
 	
-	while (loop < 52 * 2){
+	while (loop < 52 ){
 	
 		for (int i = 0; i<Blocks; ++i) {
 			score1[i] = 0;
@@ -341,8 +355,10 @@ int main( int argc, char *argv[] ) {
 			int scan = 0;
 	
 			int sum = 0;
-	
+			
 			for (int i = 0; i < simDuration; i++) {
+			
+			    
 
 				autoStep1<<<Blocks, size>>>(da, db, directionArrayD, rule);
 				autoStep2<<<Blocks, size>>>(da, db, directionArrayD, rule);
@@ -359,10 +375,16 @@ int main( int argc, char *argv[] ) {
 			for (int i = 0+scan; i<N; ++i) {
 				if(i%size == 0 && i > 0){
 		       
-					score1[count] += sum;
-					score2[count] += abs(int(sum));
+					//score1[count] += sum;
+				    //score2[count] += abs(int(sum));
 				
-                    //if(score1[count] < 0){printf("auto %ud score2: %d ", rule + count, score1[count]);}
+				    if (sum > 0){score1[count] = score1[count] + 1;}
+					
+					if (sum < 0){score2[count] = score2[count] + 1;}
+					
+					//if (rule + count == 65376){printf("score1: %05d score2: %05d\n", score1[count], score2[count]);}
+				
+                    //if(sum < 0){printf("auto %ud score2: %d ", rule + count, sum);} //score1[count]);
 				
 					sum = 0;
 					count++;
@@ -374,19 +396,27 @@ int main( int argc, char *argv[] ) {
 			
 			//count++;
 			
-			score1[count] += sum;
-			score2[count] += abs(int(sum));
+			if (sum > 0){score1[count] = score1[count] + 1;}
+					
+			if (sum < 0){score2[count] = score2[count] + 1;}
+			
+			//score1[count] += sum;
+			//score2[count] += abs(int(sum));
 				
 		
 		}
 
 		
-		for (int i = 0; i<(N/size); i++){
+		for (int i = 0; i<(Blocks); i++){
 	
-			//printf("score1: %8d, score2: %8d\n", score1[i], score2[i]);
-	
-			finalScore[i] = score2[i] - abs(score1[i]);
-	        //printf(" %d , %u , %d \n" , i , rule + i, finalScore[i]);
+			//printf("score1: %8d, score2: %8d", score1[i], score2[i]);
+
+            if (score1[i] > score2[i]){finalScore[i] = score2[i];}
+            if (score2[i] > score1[i]){finalScore[i] = score1[i];}
+			
+			//finalScore[i] = score2[i] - abs(score1[i]); // score1[i] - score2[i];//
+	        //if(rule + i == 65376){
+			//printf("i:  %d ,rule: %u ,score: %d \n" , i , rule + i, finalScore[i]);}
 		
 			//if (finalScore[i] > 0) { loop = 0;}
 		}
@@ -419,8 +449,8 @@ int main( int argc, char *argv[] ) {
 	
 			//std::cout << "1 writing to db #" << i << std::endl;
 	
-			sprintf(keyValue,  "%08x", rule + i);
-			sprintf(dataValue,  "%08x", finalScore[i]);
+			sprintf(keyValue,   "%08x", rule + i);
+			sprintf(dataValue,  "%08x", finalScore[i]);//score1[i]);//
 		
 			//std::cout << "Key: " << keyValue << " Score: " << dataValue << std::endl;
 	
@@ -456,7 +486,7 @@ int main( int argc, char *argv[] ) {
 	
 	}
 	
-	//for (int i = 0; i<N/size; i++){
+	//for (int i = 0; i<Blocks; i++){
 	
 	//	printf("auto %u, score: %d\n", rule + i, finalScore[i]);
 	//}
