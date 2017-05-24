@@ -3,6 +3,8 @@ import lmdb
 import binascii
 from PIL import Image
 import numpy as np
+import sympy as sp
+from sympy.combinatorics.graycode import bin_to_gray
 
 from hilbert_curve import d2xy
 
@@ -42,6 +44,8 @@ count = 0
 
 champ = 0
 
+zerocount = 0
+
 for i in range (0,1):
 
     lmdb_cursor = lmdb_txn.cursor()
@@ -54,6 +58,8 @@ for i in range (0,1):
         numvalue = np.int32(int(bytes(value), 16))
         #if(numvalue > 0):
         #print (count)
+        if numvalue == 0:
+            zerocount = zerocount + 1	
         if (numvalue > champ):
             champ = numvalue	
             print ("%s: %s" %(numkey, numvalue))
@@ -61,7 +67,17 @@ for i in range (0,1):
         output_sound[count] = numvalue
 			
         count = count + 1
+
+        #example binary_key_string
+        # 1110100000010
 		
+        binary_key_string = format(numkey, '016b') #str(bin(numkey))[2:]
+
+        #print(binary_key_string)
+
+        gray_key_string   = bin_to_gray(binary_key_string[::-1])
+
+        numkey            = int(gray_key_string, 2)
 
 		
         #numkey = (numkey + 32 * i) % (2**16)
@@ -117,19 +133,23 @@ for i in range (0,1):
         else:
             output_img[numkey//256][numkey%256] = numvalue * 5	
         if(numvalue < 0):
-            output_img[numkey//256][numkey%256][2] = abs(numvalue)			
+            output_img[numkey//256][numkey%256][2] = abs(numvalue)
+
+        output_img[numkey//256][numkey%256] = count // 256 #numvalue * 5			
 		
 		
 		#"""
 		
+    print "~~~~~" + str(zerocount)
+		
     print output_sound.shape
-    sp = np.fft.fft(output_sound)
-    print sp.shape
+    #sp = np.fft.fft(output_sound)
+    #print sp.shape
 	
-    im = Image.fromarray(np.reshape(sp, (256, 256)).astype('uint8'))   #output_img.astype('uint8'))
+    #im = Image.fromarray(np.reshape(sp, (256, 256)).astype('uint8'))   #output_img.astype('uint8'))
 	
 	
-    im.save('tiles-hough/fft-%s.png' % ( sys.argv[2]))
+    #im.save('tiles-hough/fft-%s.png' % ( sys.argv[2]))
 		
     im = Image.fromarray(  output_img.astype('uint8'))
     im.save('tiles-hough/orig-%s.png' % ( sys.argv[2]))
