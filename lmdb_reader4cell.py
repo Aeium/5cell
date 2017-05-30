@@ -3,10 +3,11 @@ import lmdb
 import binascii
 from PIL import Image
 import numpy as np
-import sympy as sp
-from sympy.combinatorics.graycode import bin_to_gray
+#import sympy as sp
+#from sympy.combinatorics.graycode import bin_to_gray
 
 from hilbert_curve import d2xy
+from mahoney_map import index2MahoneyXY, MahoneyXY2index
 
 from scipy.io.wavfile import write
 import cv2
@@ -46,11 +47,14 @@ champ = 0
 
 zerocount = 0
 
-for i in range (0,1):
+for i in range (0,1):#(257,2048):
 
-    lmdb_cursor = lmdb_txn.cursor()
+    #lmdb_cursor = lmdb_txn.cursor()
+ 
+
  
     for key, value in lmdb_cursor:
+    #for j in range(0,2**16):
         numkey   = int(bytes(key), 16)
 	
         if (numkey) >= 2**16:
@@ -65,23 +69,28 @@ for i in range (0,1):
             print ("%s: %s" %(numkey, numvalue))
 
         output_sound[count] = numvalue
-			
-        count = count + 1
 
-        #example binary_key_string
-        # 1110100000010
+        print numkey
 		
-        binary_key_string = format(numkey, '016b') #str(bin(numkey))[2:]
-
-        #print(binary_key_string)
-
-        gray_key_string   = bin_to_gray(binary_key_string[::-1])
-
-        numkey            = int(gray_key_string, 2)
-
+        #numkey_x, numkey_y  = d2xy(j,16)
+        j = numkey
 		
-        #numkey = (numkey + 32 * i) % (2**16)
+        
+        numkey_x, numkey_y = index2MahoneyXY(j, 16)	
+        """		
+        if (MahoneyXY2index(numkey_x, numkey_y, 16) == j):
+            print ("inverse function match %s " % j)
+        else:
+            print ("NO MATCH!!!          j:%s " % j)
+            print ("Inverse try            %s " % MahoneyXY2index(numkey_x, numkey_y, 16))
+            print (MahoneyXY2index(numkey_x, numkey_y, 16) == j)
+            kill = 1/0			
+        count = count + 1		
+        """        
+		#numkey = (numkey + 32 * i) % (2**16)
 
+        #if (count % 256 == 0):
+        #		print count
 #for j in range (0, imsize):
 	
 #    for h in range (0, imsize):
@@ -122,27 +131,29 @@ for i in range (0,1):
 			
 
         #if(numvalue == 0):	
-        #    output_img[x][y] = 0#255 #numvalue / 40#* 5#location / 255#255#value
+        #    output_img[numkey_x][numkey_y] = 0#255 #numvalue / 40#* 5#location / 255#255#value
         #else:
-        #    output_img[x][y] = numvalue * 5
+        #    output_img[numkey_x][numkey_y] = numvalue * 5
 		
         #"""
 		
-        if(numvalue == 0):	
-            output_img[numkey//256][numkey%256] = 0#255 #numvalue / 40#* 5#location / 255#255#value
-        else:
-            output_img[numkey//256][numkey%256] = numvalue * 5	
-        if(numvalue < 0):
-            output_img[numkey//256][numkey%256][2] = abs(numvalue)
+        #if(numvalue == 0):	
+        #    output_img[numkey//256][numkey%256] = 0#255 #numvalue / 40#* 5#location / 255#255#value
+        #else:
+        #    output_img[numkey//256][numkey%256] = numvalue * 5	
+        #if(numvalue < 0):
+        #    output_img[numkey//256][numkey%256][2] = abs(numvalue)
 
-        output_img[numkey//256][numkey%256] = count // 256 #numvalue * 5			
+        mod = i
+		
+        output_img[numkey_x][numkey_y] =  numvalue * 5 #j # (255 // (mod-1)) #numvalue * 5			
 		
 		
 		#"""
 		
-    print "~~~~~" + str(zerocount)
+    #print "~~~~~" + str(zerocount)
 		
-    print output_sound.shape
+    #print output_sound.shape
     #sp = np.fft.fft(output_sound)
     #print sp.shape
 	
@@ -152,7 +163,7 @@ for i in range (0,1):
     #im.save('tiles-hough/fft-%s.png' % ( sys.argv[2]))
 		
     im = Image.fromarray(  output_img.astype('uint8'))
-    im.save('tiles-hough/orig-%s.png' % ( sys.argv[2]))
+    im.save('inv-mahoney/%s.png' % ( sys.argv[2] ))
 
 
 
