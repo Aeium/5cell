@@ -7,7 +7,7 @@
 #include <cudaProfiler.h>
 #include <lmdb.h>
 #include <fstream>
-#include "addressbook.pb.h"
+//#include "addressbook.pb.h"
 
 
 // ./4cell_debug1 65376 123
@@ -36,7 +36,7 @@ using std::chrono::milliseconds;
 // Nearly minimal CUDA example.
 // Compile with:
 //
-// nvcc -o example example.cu
+// nvcc -llmdb -std=c++11 -o example example.cu
 //
 
 #define blockMult 2
@@ -49,6 +49,7 @@ using std::chrono::milliseconds;
 #define MINUS_ONE   -1.0f
 #define simDuration 400
 #define rounds      100
+#define rSize       32
 
 //
 // A function marked __global__
@@ -74,25 +75,223 @@ using std::chrono::milliseconds;
 // C/C++ code.
 //
 
-__global__
-void combinedKernel(unsigned char *a1, unsigned char *a2, 
- unsigned char *b1, unsigned char *b2, int *direction, unsigned int ruleBase) {
+__global__ void print_kernel(unsigned int start, unsigned int *loop, unsigned int ruleBase) {
 
-    unsigned int rule = blockBase + threadIdx.x; //(threadIdx.x*8);
+	
+    unsigned int rule = ruleBase +  blockIdx.x * 10 + threadIdx.x; 
+	
+	if(rule == 9){ rule = 28086;}
+	
+	//for(int j = 0; j < 5; j++){
+	
+	//    printf("Hello from block %d, thread %d, rule %d, j %d\n", blockIdx.x, threadIdx.x, rule, j);
+	
+	//}
+	
+    unsigned int a1 = start;
+    unsigned int a2 = 0;
+	
+    unsigned int mask;
+	
+	unsigned char write;
+	
+	if(rule == 28086){
+	    for (int b = 0; b < rSize; b++){
+	
+	        printf("%d", CHECK_BIT(a1,b));
+	
+    	}
+		
+		printf("\n");
+	}
+	
+    for (int j = 0; j < 3; j ++){
+	
+	    if(rule == 28086){
+        printf("1.. %d %d\n", j, rounds);
+	    }
+	    // TURTLE STEP 1
+	
+	    for (int i = 0; i < rSize; i++){
+		
+		    //if(rule == 28086){
+		    //printf("2.. %d %d\n", i, rSize);
+	        //}
+	        // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	        unsigned char neighboorhood =  (CHECK_BIT( a1, (i-2)%rSize) << 3 )+    
+		           	                       (CHECK_BIT( a1, (i-1)%rSize) << 2 )+
+		    	                           (CHECK_BIT( a1, (i+1)%rSize) << 1 )+
+                                            CHECK_BIT( a1, (i+2)%rSize);
+						
+						
+	        if(rule == 28086){
+			     printf("bit1 %d\n", CHECK_BIT( a1, (i-2)%rSize) << 3 );
+			     printf("bit2 %d\n", CHECK_BIT( a1, (i-1)%rSize) << 2);
+			     printf("bit3 %d\n", CHECK_BIT( a1, (i+1)%rSize) << 1);
+			     printf("bit4 %d\n", CHECK_BIT( a1, (i+2)%rSize) );
+                 printf("neighboorhood %d\n", neighboorhood);
+	        }						
+            
+	
+	        // 1111 1110 is 254
+		
+	    	mask = 1;                       // defalt mask for no bit shift
+	
+	        mask = (mask << i);             // create proper mask to preserve other bits
+	
+        	//if(rule == 28086){
+	        //    for (int b = 0; b < rSize; b++){
+	
+	        //       printf("%d", CHECK_BIT(~mask,b));
+	
+    	    //}
+		
+		   //printf("\n");
+	       //}
+	
+            write = CHECK_BIT(rule, neighboorhood);
+			
+	        if(rule == 28086){
+                 printf("%d\n",write);
+				 //printf("a2 & mask %d\n", (a2 & mask));
+	        }
+	
+            a2 = (a2 & ~mask);
+			
+			a2 = a2 + (write << i);
+			
+        	if(rule == 28086){
+	            for (int b = 0; b < rSize; b++){
+	
+	                printf("%d", CHECK_BIT(a2,b));
+	
+    	        }
+				
+				printf("\n");
+			
+			}
+
+	        //if(rule == 28086){
+            //     printf("a2 %d\n", a2);
+	        //}
+			
+			//+ ( write << i);  // use mask and add in new bit
+	
+            //if(rule == 9){
+            //     printf("write %d\n", write);
+	        //}
+	
+	    }
+		
+		if(rule == 28086){
+		     printf("\n");
+	    }
+	
+	    // TURTLE STEP 2
+	
+ for (int i = 0; i < rSize; i++){
+		
+		    //if(rule == 28086){
+		    //printf("2.. %d %d\n", i, rSize);
+	        //}
+	        // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	        unsigned char neighboorhood =  (CHECK_BIT( a2, (i-2)%rSize) << 3 )+    
+		           	                       (CHECK_BIT( a2, (i-1)%rSize) << 2 )+
+		    	                           (CHECK_BIT( a2, (i+1)%rSize) << 1 )+
+                                            CHECK_BIT( a2, (i+2)%rSize);
+						
+						
+	        if(rule == 28086){
+			     printf("bit1 %d\n", CHECK_BIT( a2, (i-2)%rSize) << 3 );
+			     printf("bit2 %d\n", CHECK_BIT( a2, (i-1)%rSize) << 2);
+			     printf("bit3 %d\n", CHECK_BIT( a2, (i+1)%rSize) << 1);
+			     printf("bit4 %d\n", CHECK_BIT( a2, (i+2)%rSize) );
+                 printf("neighboorhood %d\n", neighboorhood);
+	        }						
+            
+	
+	        // 1111 1110 is 254
+		
+	    	mask = 1;                       // defalt mask for no bit shift
+	
+	        mask = (mask << i);             // create proper mask to preserve other bits
+	
+        	//if(rule == 28086){
+	        //    for (int b = 0; b < rSize; b++){
+	
+	        //       printf("%d", CHECK_BIT(~mask,b));
+	
+    	    //}
+		
+		   //printf("\n");
+	       //}
+	
+            write = CHECK_BIT(rule, neighboorhood);
+			
+	        if(rule == 28086){
+                 printf("%d\n",write);
+				 //printf("a1 & mask %d\n", (a1 & mask));
+	        }
+	
+            a1 = (a1 & ~mask);
+			
+			a1 = a1 + (write << i);
+			
+        	if(rule == 28086){
+	            for (int b = 0; b < rSize; b++){
+	
+	                printf("%d", CHECK_BIT(a2,b));
+	
+    	        }
+				
+				printf("\n");
+			
+			}
+
+	        //if(rule == 28086){
+            //     printf("a1 %d\n", a1);
+	        //}
+			
+			//+ ( write << i);  // use mask and add in new bit
+	
+            //if(rule == 9){
+            //     printf("write %d\n", write);
+	        //}
+	
+	    }
+		
+	    if(rule == 28086){
+		     printf("\n");
+	    }
+		
+	}
+	
+	
+	
+}
+
+__global__ void combinedKernel(unsigned int start, unsigned int *loop, unsigned int ruleBase) {
+
+    if (threadIdx.x == 0) {
+        printf("DOES THIS WORK");
+    }
+
+ 
+    unsigned int rule = ruleBase + threadIdx.x; //(threadIdx.x*8);
+
 	
     // rule per block
     // 256 threads per block so 256 cells in automation 
 	
-	unsigned char a1[size];
-	unsigned char a2[size];
+	unsigned int a1 = start;
+	unsigned int a2;
 
-	unsigned char b1[size];
-	unsigned char b2[size];
+	unsigned int b1 = start;
+	unsigned int b2;
 	
-	int index1;
-	int index2;
-	int index3;
-	int index4;
+	unsigned char write;
 	
 	unsigned char mask;
 	
@@ -104,135 +303,281 @@ void combinedKernel(unsigned char *a1, unsigned char *a2,
 	
 	    // TURTLE STEP 1
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( a1[(i-2)/8], (i-2)%8) << 3 +    
-		           	                       CHECK_BIT( a1[(i-1)/8], (i-1)%8) << 2 +
-		    	                           CHECK_BIT( a1[(i+1)/8], (i+1)%8) << 1 +
-                                           CHECK_BIT( a1[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood = CHECK_BIT( a1, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( a1, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( a1, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( a1, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
 	    	mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            a2[i/8] = (a2[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
+            write = CHECK_BIT(rule, neighboorhood);
+	
+            a2 = (a2 & mask) + ( write << i);  // use mask and add in new bit
+	
+            if(rule == 9){
+			
+	            printf("%s",write);
+			
+			}
 	
 	    }
+		
+		printf("\n");
 	
 	    // TURTLE STEP 2
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( a2[(i-2)/8], (i-2)%8) << 3 +    
-		        	                       CHECK_BIT( a2[(i-1)/8], (i-1)%8) << 2 +
-		    	                           CHECK_BIT( a2[(i+1)/8], (i+1)%8) << 1 +
-                                          CHECK_BIT( a2[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood = CHECK_BIT( a2, (i-2)%rSize) << 3 +    
+		        	                       CHECK_BIT( a2, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( a2, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( a2, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
 		    mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            a1[i/8] = (a1[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
+            write = CHECK_BIT(rule, neighboorhood);
+	
+            a1 = (a1 & mask) + ( write << i);  // use mask and add in new bit
+	
+            if(rule == 521){
+			
+	            printf("%s",write);
+			
+			}
 	
 	    }
+		
+		printf("\n");
 	
 	    // RABBIT STEP 1
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( b1[(i-2)/8], (i-2)%8) << 3 +    
-		         	                       CHECK_BIT( b1[(i-1)/8], (i-1)%8) << 2 +
-		    	                           CHECK_BIT( b1[(i+1)/8], (i+1)%8) << 1 +
-                                           CHECK_BIT( b1[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood =  CHECK_BIT( b1, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( b1, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( b1, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( b1, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
-		    mask = 254;                                                             // default mask for no bit shift
+	    	mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            b2[i/8] = (b2[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
+            b2 = (b2 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
 	
 	    }
 	
 	    // RABBIT STEP 2
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( b2[(i-2)/8], (i-2)%8) << 3 +    
-		         	                       CHECK_BIT( b2[(i-1)/8], (i-1)%8) << 2 +
-		    	                           CHECK_BIT( b2[(i+1)/8], (i+1)%8) << 1 +
-                                          CHECK_BIT( b2[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood =  CHECK_BIT( b2, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( b2, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( b2, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( b2, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
-		    mask = 254;                                                             // default mask for no bit shift
+	    	mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            b1[i/8] = (b1[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
+            b1 = (b1 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
 	
 	    }
 	
 	    // RABBIT STEP 3
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( b1[(i-2)/8], (i-2)%8) << 3 +    
-		         	                       CHECK_BIT( b1[(i-1)/8], (i-1)%8) << 2 +
-		    	                           CHECK_BIT( b1[(i+1)/8], (i+1)%8) << 1 +
-                                           CHECK_BIT( b1[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood =  CHECK_BIT( b1, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( b1, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( b1, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( b1, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
-		    mask = 254;                                                             // default mask for no bit shift
+	    	mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            b2[i/8] = (b2[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
-	 
+            b2 = (b2 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
 	    }
 	
 	    // RABBIT STEP 4
 	
-	    for (int i = 0; i < size * 8; i++){
+	    for (int i = 0; i < rSize; i++){
 		
 	
 	        // unpack cells from char and bitshift and add to create neighboorhood number
 	    
-	        unsigned char neighboorhoodT = CHECK_BIT( b2[(i-2)/8], (i-2)%8) << 3 +    
-	    	     	                       CHECK_BIT( b2[(i-1)/8], (i-1)%8) << 2 +
-	    		                           CHECK_BIT( b2[(i+1)/8], (i+1)%8) << 1 +
-                                           CHECK_BIT( b2[(i+2)/8], (i+2)%8);
+	        unsigned char neighboorhood =  CHECK_BIT( b2, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( b2, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( b2, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( b2, (i+2)%rSize);
 	
 	        // 1111 1110 is 254
 		
-		    mask = 254;                                                             // default mask for no bit shift
+	    	mask = 254;                                                             // defalt mask for no bit shift
 	
-	        mask = (mask >> 8-i%8) | (mask << i%8);                                 // create proper mask to preserve other bits
+	        mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
 	
-            b1[i/8] = (b1[i/8] & mask) + ( CHECK_BIT(rule, neighboorhood) << i%8);  // use mask and add in new bit
-	 
+            b1 = (b1 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
 	    }
+		
+		// rotate through register and check for cycles
+		
+		int match = 0;
+		
+		for (int i =0; i< rSize; i++){
+		
+		    if(a1 == b1){
+			
+			    match = 1;
+			    break;
+			
+			}
+			
+			a1 = (mask >> rSize-1) | (mask << 1);   // rotate to check for symmetries
+		
+		}
+		
+		if (match == 1){
+		
+            printf("Match in %08d, state: %32%d\n", rule , a1);
+		    match = a1;
+		
+		
+		
+		    // need to run one iteration before checking for match or it will just match right away
+		
+	        // TURTLE STEP 1
+	
+	        for (int i = 0; i < rSize; i++){
+		
+	
+	            // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	            unsigned char neighboorhood = CHECK_BIT( a1, (i-2)%rSize) << 3 +    
+		           	                       CHECK_BIT( a1, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( a1, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( a1, (i+2)%rSize);
+	
+	            // 1111 1110 is 254
+		
+	    	    mask = 254;                                                             // defalt mask for no bit shift
+	
+	            mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
+	
+                a2 = (a2 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
+	        }
+	
+	        // TURTLE STEP 2
+	
+	        for (int i = 0; i < rSize; i++){
+		
+	
+	            // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	            unsigned char neighboorhood = CHECK_BIT( a2, (i-2)%rSize) << 3 +    
+		        	                       CHECK_BIT( a2, (i-1)%rSize) << 2 +
+		    	                           CHECK_BIT( a2, (i+1)%rSize) << 1 +
+                                           CHECK_BIT( a2, (i+2)%rSize);
+	
+	            // 1111 1110 is 254
+		
+		        mask = 254;                                                             // defalt mask for no bit shift
+	
+	            mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
+	
+                a1 = (a1 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
+	        }
+		
+            loop[rule] = 1;
+		
+		    while(a1 != match){
+		
+	            // TURTLE STEP 1
+	
+	             for (int i = 0; i < rSize; i++){
+		
+	
+	                // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	               unsigned char neighboorhood = CHECK_BIT( a1, (i-2)%rSize) << 3 +    
+		              	                      CHECK_BIT( a1, (i-1)%rSize) << 2 +
+		    	                              CHECK_BIT( a1, (i+1)%rSize) << 1 +
+                                              CHECK_BIT( a1, (i+2)%rSize);
+	
+	                // 1111 1110 is 254
+		
+ 
+	                mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
+	
+                    a2 = (a2 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
+	            }
+	
+	            // TURTLE STEP 2
+	
+	            for (int i = 0; i < rSize; i++){
+		
+	
+	                // unpack cells from char and bitshift and add to create neighboorhood number
+	    
+	                unsigned char neighboorhood = CHECK_BIT( a2, (i-2)%rSize) << 3 +    
+		        	                          CHECK_BIT( a2, (i-1)%rSize) << 2 +
+		    	                              CHECK_BIT( a2, (i+1)%rSize) << 1 +
+                                              CHECK_BIT( a2, (i+2)%rSize);
+	
+	                // 1111 1110 is 254
+		
+		            mask = 254;                                                             // defalt mask for no bit shift
+	
+	                mask = (mask >> rSize-i) | (mask << i);                                 // create proper mask to preserve other bits
+	
+                    a1 = (a1 & mask) + ( CHECK_BIT(rule, neighboorhood) << i);  // use mask and add in new bit
+	
+	            }
+		
+		    loop[rule] = loop[rule] + 1; // increment counter to check for loop duration
+		
+		    }
+		
+		}
+		
+        loop[rule] = a1;
+		
 	
 	    // it would be great to detect any sort of cycle here
 	
@@ -240,145 +585,12 @@ void combinedKernel(unsigned char *a1, unsigned char *a2,
 		
 		// I need a bitshift invariant hash
 	
+        // or just put the entire automation in one register
 	
 	
     }
 }
 
-	
-	
-
-
-__global__
-void autoStep1(unsigned char *a, unsigned char *b, int *direction, unsigned int ruleBase) {
-
-    unsigned int blockBase = blockIdx.x  * size;
-
-    unsigned int tid = blockBase + threadIdx.x; //(threadIdx.x*8);
-	
-    // rule per block
-    // 256 threads per block so 256 cells in automation 
-	
-	
-	unsigned char neighboorhood = ((a[(threadIdx.x - 2)% size + blockBase]) << 3) +
-			                      ((a[(threadIdx.x - 1)% size + blockBase]) << 2) +
-	    	                      //((a[(threadIdx.x    )% size + blockBase]) << 2) +
-			                      ((a[(threadIdx.x + 1)% size + blockBase]) << 1) +
-                                    a[(threadIdx.x + 2)% size + blockBase];
-    
-	
-	b[tid] = CHECK_BIT(blockIdx.x + ruleBase, neighboorhood );
-	
-    //half one = __float2half(ONE);
-	
-	if (b[tid] == CHECK_BIT( neighboorhood , 3 )){
-			direction[tid] -= 1;}
-	if (b[tid] == CHECK_BIT( neighboorhood , 2 )){
-			direction[tid] -= 1;}
-	if (b[tid] == CHECK_BIT( neighboorhood , 1 )){
-			direction[tid] += 1;}
-	if (b[tid] == CHECK_BIT( neighboorhood , 0 )){
-			direction[tid] += 1;}
-			
-
-	/*
-	unsigned char ll = a[(threadIdx.x - 2)% 128 + blockBase];
-	unsigned char l  = a[(threadIdx.x - 1)% 128 + blockBase];
-	unsigned char c  = a[(threadIdx.x    )% 128 + blockBase];
-	unsigned char r  = a[(threadIdx.x + 1)% 128 + blockBase];
-	unsigned char rr = a[(threadIdx.x + 2)% 128 + blockBase];
-  
-	b[tid] = (ll << 4) + (l << 3) + (c << 2) + (r << 1) + (rr);//ll * 16 + l * 8 + c * 4 + r * 2 + rr;
- 
-	b[tid] = CHECK_BIT(blockIdx.x + ruleBase, b[tid]);
-
-		// the original way was b[tid] == l || b[tid] == ll maybe for some weird reason that's better 
-	
-	
-	//if (b[tid] == ll || b[tid] == l){
-	//	direction[tid] -= 1;}
-	//  if (b[tid] == rr || b[tid] == r){
-	//	direction[tid] += 1;}
-	
-	
-	
-	if (b[tid] == ll){
-			direction[tid] -= 1;}
-	if (b[tid] == l){
-			direction[tid] -= 1;}
-	if (b[tid] == rr){
-			direction[tid] += 1;}
-	if (b[tid] == r){
-			direction[tid] += 1;}
-			
-    */
-			
-}
-
-__global__
-void autoStep2(unsigned char *a, unsigned char *b, int *direction, unsigned int ruleBase) {
-
-    unsigned int blockBase = blockIdx.x  * size;
-
-    unsigned int tid = blockBase + threadIdx.x;
-	
-    // rule per block
-    // 256 threads per block so 256 cells in automation 
-	
-	
-	unsigned char neighboorhood = ((b[(threadIdx.x - 2)% size + blockBase]) << 3) +
-			                      ((b[(threadIdx.x - 1)% size + blockBase]) << 2) +
-	    	                      //((b[(threadIdx.x    )% size + blockBase]) << 2) +
-			                      ((b[(threadIdx.x + 1)% size + blockBase]) << 1) +
-                                   b[(threadIdx.x + 2)% size + blockBase];
-    
-	a[tid] = CHECK_BIT(blockIdx.x + ruleBase, neighboorhood );
-	
-    //half one = __float2half(ONE);
-	
-	if (a[tid] == CHECK_BIT( neighboorhood , 3 )){
-			direction[tid] -= 1;}
-	if (a[tid] == CHECK_BIT( neighboorhood , 2 )){
-			direction[tid] -= 1;}
-	if (a[tid] == CHECK_BIT( neighboorhood , 1 )){
-			direction[tid] += 1;}
-	if (a[tid] == CHECK_BIT( neighboorhood , 0 )){
-			direction[tid] += 1;}
-			
-			
-	/*
-	
-	
-	unsigned char ll = b[(threadIdx.x - 2)% 128 + blockBase];
-	unsigned char l  = b[(threadIdx.x - 1)% 128 + blockBase];
-	unsigned char c  = b[(threadIdx.x    )% 128 + blockBase];
-	unsigned char r  = b[(threadIdx.x + 1)% 128 + blockBase];
-	unsigned char rr = b[(threadIdx.x + 2)% 128 + blockBase];
-  
-	a[tid] = (ll << 4) + (l << 3) + (c << 2) + (r << 1) + (rr);//ll * 16 + l * 8 + c * 4 + r * 2 + rr; //ll << 4 + l << 3 + c << 2 + r << 1 + rr;
- 
-	a[tid] = CHECK_BIT(blockIdx.x + ruleBase, a[tid]);
-
-		// the original way was b[tid] == l || b[tid] == ll maybe for some weird reason that's better
-	
-	
-	//if (a[tid] == ll || a[tid] == l){
-	//	direction[tid] -= 1;}
-	//if (a[tid] == rr || a[tid] == r){
-	//		direction[tid] += 1;}
-	
-	
-	if (a[tid] == ll){
-			direction[tid] -= 1;}
-	if (a[tid] == l){
-			direction[tid] -= 1;}
-	if (a[tid] == rr){
-			direction[tid] += 1;}
-	if (a[tid] == r){
-			direction[tid] += 1;}
-    */
- 
-}
 
 
 __global__ void equals(unsigned char *a, unsigned char *b, unsigned char *resultArray) {
@@ -447,38 +659,11 @@ int main( int argc, char *argv[] ) {
 	rc = mdb_env_set_mapsize(env, (68719476736 * 2));
 	rc = mdb_env_open(env, argv[2], 0, 0664);
 
-
-    //
-    // Create int arrays on the CPU.
-    // ('h' stands for "host".)
-    //
-    unsigned char ha[N];
-
-    int directionArray[N];
 	
-    //
-    // Create corresponding int arrays on the GPU.
-    // ('d' stands for "device".)
-    //
-    curandState *devStates;
-    cudaMalloc((void **)&devStates, N *  sizeof(curandState));
+	unsigned int resultArray[Blocks];
 	
-    setup_kernel<<<Blocks, size>>>(devStates);
-	
-	unsigned char *daR, *dbR;
-    cudaMalloc((void **)&daR, N*sizeof(char));
-    cudaMalloc((void **)&dbR, N*sizeof(char));
-	
-	unsigned char *daT, *dbT;
-    cudaMalloc((void **)&daT, N*sizeof(char));
-    cudaMalloc((void **)&dbT, N*sizeof(char));
-
-    unsigned int *repeatState;
-    cudaMalloc((void **)&rpeateState, N*sizeof(char));
-	
-	
-    int *resultArrayD;
-    cudaMalloc((void **)&resultArrayD, N*sizeof(char));
+    unsigned int *resultArrayD;
+    cudaMalloc((void **)&resultArrayD, Blocks*sizeof(int));
 
     //time_point<Clock> start = Clock::now();
 	
@@ -507,101 +692,58 @@ int main( int argc, char *argv[] ) {
 	
     int loop = 0;
 	
-	while (loop < 52 ){
-	
-		for (int i = 0; i<Blocks; ++i) {
+	unsigned int randomStart = 0;
+
+    for (int i = 0; i<Blocks; ++i) {
 			score1[i] = 0;
 			score2[i] = 0;
-		}
+			finalScore[i] = 0;
+    }
 	
-		for (int iters = 0; iters < rounds; iters++) {
+	while (loop < 2 ){
 	
-			srand(time(NULL) + iters);
+       
 	
-	        // http://stackoverflow.com/questions/14289378/generating-random-numbers-within-cuda-kernel
+		for (int iters = 0; iters < 2; iters++) {
+	
+			srand(time(0) + iters);
+	
+            randomStart = rand();
 			
-			// GENERATING RANDOM NUMBERS WITH CUDA WILL SPEED THIS UP ALOT MAYBE
-	
-	
-			//for (int i = 0; i<N; ++i) {
-			//	ha[i] = rand()%2;
-				//if(i%256 - 128 == 0){ ha[i] = 1;}
-			//}
+			cudaMemset(resultArrayD, 0, Blocks*sizeof(int));
 
-			//for (int i = 0; i<N; ++i) {
-			//	hb[i] = 0;
-			//}
-	
-			//for (int i = 0; i<N; ++i) {
-			//	directionArray[i] = 0;
-			//}
-
-			//
-			// Copy input data to array on GPU.
-			//
-			//cudaMemcpy(da, ha, N*sizeof(char), cudaMemcpyHostToDevice);
-			
-			cudaMemset(da, 0, N * sizeof(char));
-
-            curand_kernel<<<Blocks, size>>>(devStates, da);
-			
-            //cudaMemcpy(ha, da, N*sizeof(char), cudaMemcpyDeviceToHost);		
-			
-			cudaMemset(directionArrayD, 0, N*sizeof(int));
-			//cudaMemcpy(directionArrayD, directionArray, N*sizeof(char), cudaMemcpyHostToDevice);
-			//
 			// Launch GPU code with N threads, one per
 			// array element.
-			//
+
 	
 			int scan = 0;
 	
 			int sum = 0;
 			
-			for (int i = 0; i < simDuration; i++) {
+			//printf("~~~~~~~~~~~ start: %d\n", randomStart);
+            //printf("~~~~~~~~~~~ rule : %d\n", rule);
 			
-			    
-                // this is the turtle automation, stepping forward one at at time
-				autoStep1<<<Blocks, size>>>(daT, dbT, directionArrayD, rule);
-				autoStep2<<<Blocks, size>>>(daT, dbT, directionArrayD, rule);
-				
-				// this is the rabbit automation, stepping forward two at a time
-				autoStep1<<<Blocks, size>>>(daR, dbR, directionArrayD, rule);
-				autoStep2<<<Blocks, size>>>(daR, dbR, directionArrayD, rule);
-				autoStep1<<<Blocks, size>>>(daR, dbR, directionArrayD, rule);
-				autoStep2<<<Blocks, size>>>(daR, dbR, directionArrayD, rule);
-
-				// if they produce the same result, then they have found a cycle
-				
-			}
+			//combinedKernel<<<Blocks, size>>>(randomStart, resultArrayD, rule);
 	
-			//cudaMemcpy(ha, da, N*sizeof(char), cudaMemcpyDeviceToHost);
-			cudaMemcpy(directionArray, directionArrayD, N*sizeof(int), cudaMemcpyDeviceToHost);
+            //cudaDeviceSynchronize();
+			
+            print_kernel<<<10, 10>>>(randomStart, resultArrayD, rule);
+            cudaDeviceSynchronize();
+	
+			cudaMemcpy(resultArray, resultArrayD, Blocks*sizeof(int), cudaMemcpyDeviceToHost);
+	
+	
 	
 			sum = 0;
 	
 			int count = 0;
 	
-			for (int i = 0+scan; i<N; ++i) {
-				if(i%size == 0 && i > 0){
-		       
-					//score1[count] += sum;
-				    //score2[count] += abs(int(sum));
-				
-				    if (sum > 0){score1[count] = score1[count] + 1;}
-					
-					if (sum < 0){score2[count] = score2[count] + 1;}
-					
-					//if (rule + count == 65376){printf("score1: %05d score2: %05d\n", score1[count], score2[count]);}
-				
-                    //if(sum < 0){printf("auto %ud score2: %d ", rule + count, sum);} //score1[count]);
-				
-					sum = 0;
-					count++;
-				}
+			for (int i = 0; i<Blocks; ++i) {
+
+                //printf("Result for %08d: %d\n", i + rule, resultArray[i]);
+                score1[i] += resultArray[i] / rounds;
 				
 				//if (directionArray[i] < 0 ) {printf("%d", directionArray[i]);}
-				sum += directionArray[i];
 			}
 			
 			//count++;
@@ -616,20 +758,9 @@ int main( int argc, char *argv[] ) {
 		
 		}
 
-		
-		for (int i = 0; i<(Blocks); i++){
+        printf("probe1\n");
 	
-			//printf("score1: %8d, score2: %8d", score1[i], score2[i]);
-
-            if (score1[i] > score2[i]){finalScore[i] = score2[i];}
-            if (score2[i] > score1[i]){finalScore[i] = score1[i];}
-			
-			//finalScore[i] = score2[i] - abs(score1[i]); // score1[i] - score2[i];//
-	        //if(rule + i == 65376){
-			//printf("i:  %d ,rule: %u ,score: %d \n" , i , rule + i, finalScore[i]);}
-		
-			//if (finalScore[i] > 0) { loop = 0;}
-		}
+ 
 	
         time_point<Clock> end = Clock::now();
 	
@@ -660,7 +791,7 @@ int main( int argc, char *argv[] ) {
 			//std::cout << "1 writing to db #" << i << std::endl;
 	
 			sprintf(keyValue,   "%08x", rule + i);
-			sprintf(dataValue,  "%08x", finalScore[i]);//score1[i]);//
+			sprintf(dataValue,  "%08x", score1[i]);//
 		
 			//std::cout << "Key: " << keyValue << " Score: " << dataValue << std::endl;
 	
@@ -709,8 +840,7 @@ int main( int argc, char *argv[] ) {
     //
     // Free up the arrays on the GPU.
     //
-    cudaFree(da);
-    cudaFree(db);
+    cudaFree(resultArrayD);
 
     return 0;
 }
